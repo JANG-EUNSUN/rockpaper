@@ -1,0 +1,216 @@
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import Confetti from "react-confetti";
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+
+const choices = ["가위 ✌️", "바위 ✊", "보 ✋"];
+
+function getResult(user, computer) {
+  if (user === computer) return "무승부";
+  if (
+    (user === "가위 ✌️" && computer === "보 ✋") ||
+    (user === "바위 ✊" && computer === "가위 ✌️") ||
+    (user === "보 ✋" && computer === "바위 ✊")
+  ) {
+    return "승리 🎉";
+  }
+  return "패배 😢";
+}
+
+export default function RockPaperScissors() {
+  const [userChoice, setUserChoice] = useState(null);
+  const [computerChoice, setComputerChoice] = useState(null);
+  const [result, setResult] = useState("");
+  const [score, setScore] = useState({ win: 0, lose: 0, total: 0 });
+  const [history, setHistory] = useState([]);
+  const [gameOver, setGameOver] = useState(false);
+  const [finalMessage, setFinalMessage] = useState("");
+  const [isWin, setIsWin] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+
+  const playGame = (choice) => {
+    if (gameOver) return;
+
+    const computer = choices[Math.floor(Math.random() * 3)];
+    const gameResult = getResult(choice, computer);
+
+    setUserChoice(choice);
+    setComputerChoice(computer);
+    setResult(gameResult);
+
+    setScore((prev) => {
+      let newScore = { ...prev };
+
+      if (gameResult === "승리 🎉") newScore.win += 1;
+      if (gameResult === "패배 😢") newScore.lose += 1;
+      newScore.total += 1;
+
+      const winRate = (newScore.win / newScore.total) * 100;
+
+      setHistory((prevHistory) => [
+        ...prevHistory,
+        { game: newScore.total, winRate: winRate }
+      ]);
+
+      if (newScore.win === 3) {
+        setGameOver(true);
+        setFinalMessage("🎉 축하합니다! 최종 승리!");
+        setIsWin(true);
+      }
+      if (newScore.lose === 3) {
+        setGameOver(true);
+        setFinalMessage("😢 아쉽네요... 다음엔 이길 수 있어요!");
+        setIsWin(false);
+      }
+
+      return newScore;
+    });
+  };
+
+  const resetGame = () => {
+    setScore({ win: 0, lose: 0, total: 0 });
+    setHistory([]);
+    setGameOver(false);
+    setFinalMessage("");
+    setUserChoice(null);
+    setComputerChoice(null);
+    setResult("");
+    setIsWin(false);
+  };
+
+  const winRate = score.total > 0 ? ((score.win / score.total) * 100).toFixed(1) : 0;
+  const loseRate = score.total > 0 ? ((score.lose / score.total) * 100).toFixed(1) : 0;
+
+  return (
+    <div
+      className={`flex items-center justify-center min-h-screen relative overflow-hidden transition-colors duration-300 ${
+        darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
+      }`}
+    >
+      {gameOver && isWin && <Confetti />}
+
+      <div className="absolute top-4 right-4 flex gap-2">
+        <Button onClick={() => setShowStats(!showStats)}>📊 통계</Button>
+        <Button onClick={() => setDarkMode(!darkMode)}>
+          {darkMode ? "☀️ 라이트" : "🌙 다크"}
+        </Button>
+      </div>
+
+      {showStats && (
+        <div className={`absolute top-16 right-4 p-4 rounded-xl shadow-lg w-72 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+          <h3 className="font-bold mb-2">📊 승률 통계</h3>
+
+          <table className="w-full text-sm text-center border mb-3">
+            <thead>
+              <tr>
+                <th className="border p-1">항목</th>
+                <th className="border p-1">횟수</th>
+                <th className="border p-1">비율</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border p-1">승</td>
+                <td className="border p-1">{score.win}</td>
+                <td className="border p-1">{winRate}%</td>
+              </tr>
+              <tr>
+                <td className="border p-1">패</td>
+                <td className="border p-1">{score.lose}</td>
+                <td className="border p-1">{loseRate}%</td>
+              </tr>
+              <tr>
+                <td className="border p-1">총 게임</td>
+                <td className="border p-1" colSpan="2">{score.total}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* 그래프 */}
+          <LineChart width={250} height={150} data={history}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="game" />
+            <YAxis domain={[0, 100]} />
+            <Tooltip />
+            <Line type="monotone" dataKey="winRate" />
+          </LineChart>
+        </div>
+      )}
+
+      <Card
+        className={`p-6 w-96 text-center shadow-xl rounded-2xl transition-colors duration-300 ${
+          darkMode ? "bg-gray-800 text-white" : "bg-white"
+        }`}
+      >
+        <CardContent>
+          <h1 className="text-2xl font-bold mb-4">가위 ✌️ 바위 ✊ 보 ✋</h1>
+
+          <div
+            className={`mb-4 p-3 rounded-xl shadow ${
+              darkMode ? "bg-gray-700" : "bg-white"
+            }`}
+          >
+            <h2 className="font-semibold mb-2">📊 3판 2선승제</h2>
+            <div className="flex justify-around text-lg">
+              <span>승: {score.win}</span>
+              <span>패: {score.lose}</span>
+            </div>
+          </div>
+
+          {!gameOver && (
+            <div className="flex justify-around mb-4">
+              {choices.map((choice) => (
+                <Button
+                  key={choice}
+                  onClick={() => playGame(choice)}
+                  className="text-lg"
+                >
+                  {choice}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {userChoice && (
+            <div className="mt-4 space-y-2">
+              <p>🙋 나: {userChoice}</p>
+              <p>🤖 컴퓨터: {computerChoice}</p>
+              <p className="text-xl font-semibold">결과: {result}</p>
+            </div>
+          )}
+
+          {gameOver && (
+            <div className="mt-6">
+              <motion.p
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1.2, opacity: 1 }}
+                transition={{ duration: 0.6, type: "spring" }}
+                className="text-2xl font-bold mb-3"
+              >
+                {finalMessage}
+              </motion.p>
+
+              {isWin && (
+                <motion.div
+                  initial={{ y: -50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="text-4xl mb-4"
+                >
+                  🏆✨🎊
+                </motion.div>
+              )}
+
+              <Button onClick={resetGame} className="w-full">
+                다시 하기 🔄
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
